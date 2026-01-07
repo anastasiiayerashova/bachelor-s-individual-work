@@ -1,34 +1,44 @@
 from collections import UserDict
+from dataclasses import dataclass, field
 
+@dataclass
 class Field:
-    def __init__(self, value):
-        self.value = value
+    value: str
 
     def __str__(self):
         return str(self.value)
 
-class Name(Field):
-    def __init__(self, name: str):
 
-        if not name or not name.strip():
+@dataclass
+class Name(Field):
+    def __post_init__(self):
+        name: str = self.value.strip()
+        
+        if not name:
             raise ValueError('Name cannot be empty')
         
-        super().__init__(name.strip())
+        self.value = name
 
 
+@dataclass
 class Phone(Field):
-    def __init__(self, phone: str):
-        phone = phone.strip()
+    def __post_init__(self):
+        phone: str = self.value.strip()
 
         if not phone.isdigit() or len(phone) != 10:
             raise ValueError('Phone number must be exactly 10 digits and contain only numbers')
 
-        super().__init__(phone)
+        self.value = phone
 
+
+@dataclass
 class Record:
-    def __init__(self, name):
-        self.name = Name(name)
-        self.phones: list[Phone] = []
+    name: Name | str
+    phones: list[Phone] = field (default_factory=list)
+
+    def __post_init__(self):
+        if not isinstance(self.name, Name):
+            self.name = Name(self.name)
 
     def add_phone (self, phone: str):
         new_phone = Phone(phone)
@@ -36,6 +46,7 @@ class Record:
         if new_phone.value not in [p.value for p in self.phones]:
             self.phones.append(new_phone)
             return f'Phone number {new_phone.value} added to contact'
+        
         else:
             return 'Phone number already exists in contact'
 
@@ -62,18 +73,18 @@ class Record:
             
         raise ValueError('Old phone number not found in contact')
     
-    def find_phone (self, phone: str):
+    def find_phone (self, phone: str) -> Phone | None:
         phone_to_find = phone.strip()
 
         for p in self.phones:
 
             if p.value == phone_to_find:
-                return f'Phone number {phone_to_find} found in contact'
+                return p
             
-        return f'Phone number {phone_to_find} not found in contact'
+        return None
 
     def __str__(self):
-        return f"Contact name: {self.name.value}, phones: {'; '.join(p.value for p in self.phones)}"
+        return f'Contact name: {self.name.value}, phones: {'; '.join(p.value for p in self.phones)}'
     
 
 class AddressBook(UserDict):
@@ -85,7 +96,10 @@ class AddressBook(UserDict):
     def delete (self, name: str):
         name_to_delete = name.strip()
 
-        if name_to_delete in self.data:
+        if name_to_delete not in self.data:
+            return f'Record for {name_to_delete} not found in address book'
+            
+        else:
             del self.data[name_to_delete]
 
         return f'Record for {name_to_delete} deleted from address book'
@@ -129,7 +143,3 @@ if __name__ == "__main__":
 
     
     book.delete("Jane")
-
-
-
-    
